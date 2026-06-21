@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { STATUSES, COLORS } from "../lib/constants";
+import { todayStr } from "../lib/dates";
 
-const blank = { name: "", owner: "", status: "Unassigned", start: "", due: "" };
+const blank = { name: "", owner: "", status: "Unassigned", start: "", due: "", completed: "" };
 
 export default function TaskModal({ open, task, allTasks, onClose, onSave, onDelete }) {
   const [form, setForm] = useState(blank);
@@ -26,7 +27,10 @@ export default function TaskModal({ open, task, allTasks, onClose, onSave, onDel
     const owner = form.owner.trim();
     let status = form.status;
     if (owner && status === "Unassigned") status = "In Progress"; // owner implies work started
-    onSave({ name, owner, status, start: form.start, due: form.due });
+    // `completed` tracks WHEN a task was finished — needed for date-range reports.
+    // Stamp today when marking done (keeping any date the user set), clear it otherwise.
+    const completed = status === "Completed" ? form.completed || todayStr() : "";
+    onSave({ name, owner, status, start: form.start, due: form.due, completed });
   }
 
   return (
@@ -72,6 +76,12 @@ export default function TaskModal({ open, task, allTasks, onClose, onSave, onDel
               <input type="date" value={form.due} onChange={set("due")} />
             </div>
           </div>
+          {form.status === "Completed" && (
+            <div className="fld">
+              <label>Completed date</label>
+              <input type="date" value={form.completed || ""} onChange={set("completed")} />
+            </div>
+          )}
         </div>
         <div className="modal-f">
           {isEdit && (

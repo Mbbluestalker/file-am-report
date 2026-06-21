@@ -1,7 +1,7 @@
 import { weekRef, taskCode } from "./dates";
 
 export function exportCSV(tasks) {
-  const head = ["Task ID", "Task", "Owner", "Status", "Start Date", "Due Date"];
+  const head = ["Task ID", "Task", "Owner", "Status", "Start Date", "Due Date", "Completed Date"];
   const rows = tasks.map((t) => [
     taskCode(t.id),
     t.name,
@@ -9,6 +9,7 @@ export function exportCSV(tasks) {
     t.status,
     t.start,
     t.due,
+    t.completed || "",
   ]);
   const csv = [head, ...rows]
     .map((r) => r.map((c) => `"${(c || "").replace(/"/g, '""')}"`).join(","))

@@ -6,7 +6,11 @@
 // e.g. https://sheetdb.io/api/v1/abcd1234
 //
 // The Google Sheet's first row (header) MUST have these columns, exactly:
-//   id | name | owner | status | start | due
+//   id | name | owner | status | start | due | completed
+//
+// `completed` holds the date (YYYY-MM-DD) a task was marked Completed, and is
+// what makes date-range reporting possible (see lib/report.js). Leave it blank
+// for tasks that aren't done.
 //
 // If VITE_SHEETDB_URL is not set, the app automatically falls back to
 // localStorage so you can develop/demo without a backend (see useTasks.js).
@@ -26,6 +30,7 @@ function normalize(row) {
     status: row.status || "Unassigned",
     start: row.start || "",
     due: row.due || "",
+    completed: row.completed || "",
   };
 }
 
