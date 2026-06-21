@@ -1,5 +1,8 @@
 import { STATUSES, STATUS_COLOR, COLORS } from "../lib/constants";
 import { fmt, daysTo, weekRef, taskCode, today } from "../lib/dates";
+import Kpis from "./Kpis";
+import Donut from "./Donut";
+import Workload from "./Workload";
 
 export default function WeeklyReport({ tasks, counts, onBack }) {
   const dateLong = today().toLocaleDateString("en-GB", {
@@ -15,7 +18,15 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
         <button className="btn" onClick={onBack}>
           ← Back to dashboard
         </button>
-        <button className="btn btn-pri" onClick={() => window.print()}>
+        <button
+          className="btn btn-pri"
+          onClick={() => {
+            const prev = document.title;
+            document.title = "FILEAM — Delivery Tracker";
+            window.print();
+            document.title = prev;
+          }}
+        >
           Print / Save PDF
         </button>
       </div>
@@ -24,7 +35,7 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
         <div>
           <div className="rep-title">Weekly Status Report</div>
           <div style={{ color: COLORS.inkSoft, fontSize: 13, marginTop: 3 }}>
-            FILEAM · Tax Filing Platform delivery
+            FILEAM — Delivery Tracker
           </div>
         </div>
         <div className="meta">
@@ -36,27 +47,10 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
         </div>
       </div>
 
-      <div className="rep-sum">
-        <div>
-          <span className="tnum">{tasks.length}</span>
-          <small>Total tasks</small>
-        </div>
-        <div>
-          <span className="tnum" style={{ color: COLORS.unassigned }}>{counts.Unassigned}</span>
-          <small>Unassigned</small>
-        </div>
-        <div>
-          <span className="tnum" style={{ color: COLORS.progress }}>{counts["In Progress"]}</span>
-          <small>In progress</small>
-        </div>
-        <div>
-          <span className="tnum" style={{ color: COLORS.complete }}>{counts.Completed}</span>
-          <small>Completed</small>
-        </div>
-        <div>
-          <span className="tnum" style={{ color: COLORS.overdue }}>{counts.overdue}</span>
-          <small>Overdue</small>
-        </div>
+      <Kpis tasks={tasks} counts={counts} />
+      <div className="grid">
+        <Donut tasks={tasks} counts={counts} />
+        <Workload tasks={tasks} />
       </div>
 
       {STATUSES.map((s) => {
