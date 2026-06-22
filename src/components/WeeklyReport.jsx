@@ -12,7 +12,7 @@ function Section({ color, title, hint, list, columns }) {
     <div className="rep-sec">
       <h4>
         <span className="pd" style={{ background: color }} />
-        {title}
+        <span style={{ color }}>{title}</span>
         <span className="cnt">
           {list.length} task{list.length !== 1 ? "s" : ""}
         </span>
@@ -72,9 +72,10 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
   // Mark overdue open tasks (due before today and not completed) for row styling.
   const flagOverdue = (t) => {
     const d = daysTo(t.due);
-    return { ...t, __over: d !== null && d < 0 };
+    return { ...t, __over: t.status !== "Completed" && d !== null && d < 0 };
   };
   const stillOpenRows = stillOpen.map(flagOverdue);
+  const backlogRows = tasks.filter((t) => t.status === "Unassigned").map(flagOverdue);
 
   const dueCol = {
     key: "due",
@@ -162,6 +163,18 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
       </div>
 
       <Section
+        color={COLORS.unassigned}
+        title="Backlog · Unassigned"
+        hint="All unassigned tasks regardless of the selected period — work nobody has picked up yet."
+        list={backlogRows}
+        columns={[
+          { key: "name", label: "Task", render: nameCell },
+          { key: "start", label: "Start", num: true, render: (t) => fmt(t.start) },
+          dueCol,
+        ]}
+      />
+
+      <Section
         color={COLORS.complete}
         title="Carried over → completed this period"
         hint="Open before this week and finished during it (completions on/before Tuesday count for the previous week)."
@@ -192,12 +205,14 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
           { key: "name", label: "Task", render: nameCell },
           { key: "owner", label: "Owner", render: ownerCell },
           { key: "start", label: "Start", num: true, render: (t) => fmt(t.start) },
-          { key: "due", label: "Due", num: true, render: (t) => fmt(t.due) },
+          dueCol,
         ];
-        const groups = STATUSES.map((s) => ({
-          s,
-          list: startedThisPeriod.filter((t) => t.status === s),
-        })).filter((g) => g.list.length);
+        const groups = STATUSES.filter((s) => s !== "Unassigned")
+          .map((s) => ({
+            s,
+            list: startedThisPeriod.filter((t) => t.status === s).map(flagOverdue),
+          }))
+          .filter((g) => g.list.length);
 
         if (!groups.length) {
           return (

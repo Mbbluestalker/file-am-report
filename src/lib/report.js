@@ -30,8 +30,9 @@ export function reportBuckets(tasks, from, to) {
 
   // Carried INTO this period: started before it began (Mon) and not yet
   // completed as of its report day (Tue). A task that started this week, or was
-  // finished on/before this Tuesday, is not a carry-over.
-  const carried = (t) => startedBefore(t, from) && !completedBy(t, cutoff);
+  // finished on/before this Tuesday, is not a carry-over. Unassigned tasks are
+  // excluded — nobody owns them yet, so they're backlog, not in-flight work.
+  const carried = (t) => t.status !== "Unassigned" && startedBefore(t, from) && !completedBy(t, cutoff);
   const completedThisPeriod = (t) =>
     Boolean(t.completed && t.completed > cutoff && t.completed <= close);
 
@@ -40,7 +41,9 @@ export function reportBuckets(tasks, from, to) {
     carriedCompleted: tasks.filter((t) => carried(t) && completedThisPeriod(t)),
     // Open before this week AND still not done by its report day.
     stillOpen: tasks.filter((t) => carried(t) && !completedBy(t, close)),
-    // Work that began inside this period (new this week).
-    startedThisPeriod: tasks.filter((t) => startedInRange(t, from, to)),
+    // Work that began inside this period (new this week), owned work only.
+    startedThisPeriod: tasks.filter(
+      (t) => t.status !== "Unassigned" && startedInRange(t, from, to)
+    ),
   };
 }
