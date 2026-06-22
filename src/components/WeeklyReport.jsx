@@ -151,7 +151,7 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
           <br />
           {dateLong}
           <br />
-          Prepared by: Jennifer Ottis
+          Prepared by: <b style={{ color: COLORS.ink }}>Jennifer Ottis</b>
         </div>
       </div>
 
