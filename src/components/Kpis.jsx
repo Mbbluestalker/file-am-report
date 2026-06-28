@@ -1,11 +1,14 @@
-export default function Kpis({ tasks, counts }) {
+export default function Kpis({ tasks, counts, totalTasks }) {
   const total = tasks.length || 1;
+  const footNote = totalTasks != null && totalTasks !== tasks.length
+    ? `${tasks.length} of ${totalTasks} total`
+    : "across all workstreams";
   return (
     <section className="kpis">
       <div className="kpi">
         <div className="lab">Total tasks</div>
         <div className="num tnum">{tasks.length}</div>
-        <div className="foot">across all workstreams</div>
+        <div className="foot">{footNote}</div>
       </div>
       <div className="kpi k-un">
         <div className="lab">Unassigned</div>

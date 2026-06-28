@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { COLORS, STATUSES, STATUS_COLOR } from "../lib/constants";
 import { fmt, daysTo, weekRef, taskCode, today, thisWeekRange, weekRange } from "../lib/dates";
 import { reportBuckets } from "../lib/report";
+import { counts as computeCounts } from "../lib/format";
 import Kpis from "./Kpis";
 import Donut from "./Donut";
 import Workload from "./Workload";
@@ -52,7 +53,7 @@ const nameCell = (t) => (
 const ownerCell = (t) =>
   t.owner || <i style={{ color: COLORS.unassigned }}>Unassigned</i>;
 
-export default function WeeklyReport({ tasks, counts, onBack }) {
+export default function WeeklyReport({ tasks, onBack }) {
   const [range, setRange] = useState(() => thisWeekRange());
   const { from, to } = range;
 
@@ -68,6 +69,19 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
     () => reportBuckets(tasks, from, to),
     [tasks, from, to]
   );
+
+  // KPI tasks = exactly the tasks shown in the section tables (union of all buckets + backlog),
+  // so the overdue/in-progress counts always match what the user sees in the report.
+  const periodTasks = useMemo(() => {
+    const seen = new Set([...carriedCompleted, ...stillOpen, ...startedThisPeriod].map((t) => t.id));
+    const backlog = tasks.filter((t) => t.status === "Unassigned");
+    return [
+      ...tasks.filter((t) => seen.has(t.id)),
+      ...backlog.filter((t) => !seen.has(t.id)),
+    ];
+  }, [tasks, carriedCompleted, stillOpen, startedThisPeriod]);
+
+  const periodCounts = useMemo(() => computeCounts(periodTasks, daysTo), [periodTasks]);
 
   // Mark overdue open tasks (due before today and not completed) for row styling.
   const flagOverdue = (t) => {
@@ -156,10 +170,10 @@ export default function WeeklyReport({ tasks, counts, onBack }) {
         </div>
       </div>
 
-      <Kpis tasks={tasks} counts={counts} />
+      <Kpis tasks={periodTasks} counts={periodCounts} totalTasks={tasks.length} />
       <div className="grid">
-        <Donut tasks={tasks} counts={counts} />
-        <Workload tasks={tasks} />
+        <Donut tasks={periodTasks} counts={periodCounts} />
+        <Workload tasks={periodTasks} />
       </div>
 
       <Section

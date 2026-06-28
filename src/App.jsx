@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { useTasks } from "./hooks/useTasks";
 import { counts as computeCounts } from "./lib/format";
-import { daysTo, weekRef } from "./lib/dates";
+import { daysTo, weekRef, thisWeekRange, weekRange } from "./lib/dates";
+import { reportBuckets } from "./lib/report";
 import { exportCSV } from "./lib/csv";
 
 import Kpis from "./components/Kpis";
@@ -24,12 +25,27 @@ export default function App() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [dateRange, setDateRange] = useState(null); // null = All time
 
-  const counts = useMemo(() => computeCounts(tasks, daysTo), [tasks]);
+  // Use the same bucket logic as the weekly report so dashboard and report
+  // stats are always consistent for the same date range.
+  const visibleTasks = useMemo(() => {
+    if (!dateRange) return tasks;
+    const { from, to } = dateRange;
+    const { carriedCompleted, stillOpen, startedThisPeriod } = reportBuckets(tasks, from, to);
+    const seen = new Set([...carriedCompleted, ...stillOpen, ...startedThisPeriod].map((t) => t.id));
+    const backlog = tasks.filter((t) => t.status === "Unassigned");
+    return [
+      ...tasks.filter((t) => seen.has(t.id)),
+      ...backlog.filter((t) => !seen.has(t.id)),
+    ];
+  }, [tasks, dateRange]);
+
+  const counts = useMemo(() => computeCounts(visibleTasks, daysTo), [visibleTasks]);
 
   const rows = useMemo(() => {
     const q = query.toLowerCase();
-    const r = tasks.filter(
+    const r = visibleTasks.filter(
       (t) =>
         (seg === "all" || t.status === seg) &&
         (owner === "all" || (owner === "__un" ? !t.owner : t.owner === owner)) &&
@@ -45,7 +61,7 @@ export default function App() {
       return x < y ? -1 * sortDir : x > y ? 1 * sortDir : 0;
     });
     return r;
-  }, [tasks, seg, owner, query, sortKey, sortDir]);
+  }, [visibleTasks, seg, owner, query, sortKey, sortDir]);
 
   function onSort(k) {
     if (sortKey === k) setSortDir((d) => d * -1);
@@ -93,7 +109,7 @@ export default function App() {
               <div className="ref">
                 Report ref <b>{weekRef()}</b>
               </div>
-              <button className="btn" onClick={() => exportCSV(tasks)}>
+              <button className="btn" onClick={() => exportCSV(visibleTasks)}>
                 Export CSV
               </button>
               <button className="btn btn-accent" onClick={() => setView("report")}>
@@ -104,6 +120,48 @@ export default function App() {
               </button>
             </div>
           </header>
+
+          <div className="date-range-bar">
+            <span className="date-range-label">Date range:</span>
+            <div className="fld" style={{ margin: 0 }}>
+              <label style={{ fontSize: 11 }}>From</label>
+              <input
+                type="date"
+                value={dateRange?.from ?? ""}
+                max={dateRange?.to ?? ""}
+                disabled={!dateRange}
+                onChange={(e) => setDateRange((r) => ({ ...r, from: e.target.value }))}
+              />
+            </div>
+            <div className="fld" style={{ margin: 0 }}>
+              <label style={{ fontSize: 11 }}>To</label>
+              <input
+                type="date"
+                value={dateRange?.to ?? ""}
+                min={dateRange?.from ?? ""}
+                disabled={!dateRange}
+                onChange={(e) => setDateRange((r) => ({ ...r, to: e.target.value }))}
+              />
+            </div>
+            <button
+              className={`btn${!dateRange ? " btn-active" : ""}`}
+              onClick={() => setDateRange(null)}
+            >
+              All time
+            </button>
+            <button
+              className={`btn${dateRange && dateRange.from === weekRange(-1).from ? " btn-active" : ""}`}
+              onClick={() => setDateRange(weekRange(-1))}
+            >
+              Last week
+            </button>
+            <button
+              className={`btn${dateRange && dateRange.from === thisWeekRange().from ? " btn-active" : ""}`}
+              onClick={() => setDateRange(thisWeekRange())}
+            >
+              This week
+            </button>
+          </div>
 
           {error && (
             <div className="banner banner-err">
@@ -129,14 +187,14 @@ export default function App() {
             <div className="banner banner-info">Loading tasks…</div>
           ) : (
             <>
-              <Kpis tasks={tasks} counts={counts} />
+              <Kpis tasks={visibleTasks} counts={counts} totalTasks={dateRange ? tasks.length : null} />
               <div className="grid">
-                <Donut tasks={tasks} counts={counts} />
-                <Workload tasks={tasks} />
+                <Donut tasks={visibleTasks} counts={counts} />
+                <Workload tasks={visibleTasks} />
               </div>
               <div className="tablewrap">
                 <FilterBar
-                  tasks={tasks}
+                  tasks={visibleTasks}
                   seg={seg}
                   setSeg={setSeg}
                   owner={owner}
@@ -150,7 +208,7 @@ export default function App() {
           )}
         </>
       ) : (
-        <WeeklyReport tasks={tasks} counts={counts} onBack={() => setView("dash")} />
+        <WeeklyReport tasks={tasks} onBack={() => setView("dash")} />
       )}
 
       <TaskModal
